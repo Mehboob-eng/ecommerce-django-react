@@ -1,0 +1,129 @@
+# views.py
+from rest_framework import generics
+from .Serilizer import UserRegisterSerializer, LoginSerializer, CategorySerializer, ProductSerializer,OrderSerializer
+from .models import Users, Category, Product, Order
+from .Permission import IsStaffUser
+from rest_framework import permissions
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+class RegisterUserAPIView(APIView):
+    def post(self, request):
+        serializer = UserRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({"message": "User created successfully", "user_id": user.id}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginAPIView(APIView):
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data['user']
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'username': user.username
+        }, status=status.HTTP_200_OK)
+    
+class LogoutAPIView(APIView):
+    permission_classes = [ permissions.IsAuthenticated ]
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"message": "User logged out successfully"}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class CategoryListAPIView(APIView):
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        """List all categories"""
+        categories = Category.objects.all()
+        serializer = CategorySerializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            category = serializer.save()
+            return Response({"message": "Category created successfully", "category_id": category.id}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ProductListAPIView(APIView):
+
+    def get(self, request):
+        """List all products"""
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class ManageProductAPIView(APIView):
+    permission_classes = [IsStaffUser]
+
+    def post(self, request):
+        serializer = ProductSerializer(data=request.data)
+        if serializer.is_valid():
+            product = serializer.save()
+            return Response({"message": "Product created successfully", "product_id": product.id}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        try:
+            product = Product.objects.get(pk=pk)
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductSerializer(product, data=request.data, partial=True)
+        if serializer.is_valid():
+            product = serializer.save()
+            return Response({"message": "Product updated successfully", "product_id": product.id}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class orderAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user)
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def post(self, request):
+        product_id = request.data.get("product_id")
+        quantity = request.data.get("quantity", 1)
+        address = request.data.get("address", "")
+
+        # Product exist check
+        product = Product.objects.filter(id=product_id).first()
+        if not product:
+            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Stock check
+        if product.stock < quantity:
+            return Response({"error": "Insufficient stock"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Order create
+        order = Order.objects.create(
+            user=request.user,
+            product=product,
+            price=product.price * quantity,
+            status="Pending",
+            address=address
+        )
+
+        # Stock update
+        product.stock -= quantity
+        product.save()
+
+        return Response({
+            "message": "Order placed successfully",
+            "order_id": order.id
+        }, status=status.HTTP_201_CREATED)

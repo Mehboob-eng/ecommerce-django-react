@@ -16,10 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from app.views import hello  # Import the hello view from app.views
+from myapp.views import RegisterUserAPIView, LoginAPIView, LogoutAPIView, CategoryListAPIView, ProductListAPIView,ManageProductAPIView, orderAPIView
 
 urlpatterns = [
-
     path('admin/', admin.site.urls),
-    path('api/hello/',hello, name='hello'),  # Example view
+    path('register/', RegisterUserAPIView.as_view(), name='user-register'),
+    path('login/', LoginAPIView.as_view(), name='user-login'),
+    path('logout/', LogoutAPIView.as_view(), name='user-logout'),
+    path("categories/", CategoryListAPIView.as_view(), name="category-list"),
+    path("products/", ProductListAPIView.as_view(), name="product-list"),  # Assuming you want to use the same view for products
+    path("manage/product/", ManageProductAPIView.as_view(), name="manage-product-list"),  # For managing products
+    path("order/", orderAPIView.as_view(), name="order-list"),  # Assuming you want to use the same view for orders
 ]

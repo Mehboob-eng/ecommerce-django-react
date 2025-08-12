@@ -97,10 +97,9 @@ class orderAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request):
-        product_id = request.data.get("product_id")
-        quantity = request.data.get("quantity", 1)
-        address = request.data.get("address", "")
-
+        product_id = request.data.get("product")
+        quantity = request.data.get("quantity")
+        address = request.data.get("address")
         # Product exist check
         product = Product.objects.filter(id=product_id).first()
         if not product:
@@ -109,14 +108,15 @@ class orderAPIView(APIView):
         # Stock check
         if product.stock < quantity:
             return Response({"error": "Insufficient stock"}, status=status.HTTP_400_BAD_REQUEST)
-
         # Order create
         order = Order.objects.create(
             user=request.user,
             product=product,
             price=product.price * quantity,
             status="Pending",
-            address=address
+            address=address,
+            quantity=quantity
+
         )
 
         # Stock update
@@ -127,3 +127,12 @@ class orderAPIView(APIView):
             "message": "Order placed successfully",
             "order_id": order.id
         }, status=status.HTTP_201_CREATED)
+    
+    def delete(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk, user=request.user)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        order.delete()
+        return Response({"message": "Order deleted successfully"}, status=status.HTTP_204_NO_CONTENT)

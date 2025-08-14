@@ -1,8 +1,9 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Users, Category, Product, Order
+from .models import Users, Category, Product, Order, review
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext as _
+
 
 
 
@@ -58,6 +59,12 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = "__all__"
+        
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
 
 
 
@@ -66,3 +73,11 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = '__all__'
         read_only_fields = ['user', 'created_at']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = review
+        fields = "__all__"
+        # read_only_fields = ['user', 'created_at']
+    

@@ -16,8 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from myapp.views import RegisterUserAPIView, LoginAPIView, LogoutAPIView, CategoryListAPIView, ProductListAPIView,ManageProductAPIView, orderAPIView
-
+from myapp.views import RegisterUserAPIView,ReviewListAPIView,ReviewAPIView,hello_world,ManageCategoryAPIView ,LoginAPIView, LogoutAPIView,manageOrderAPIView, CategoryListAPIView, ProductListAPIView,ManageProductAPIView, orderAPIView
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('register/', RegisterUserAPIView.as_view(), name='user-register'),
@@ -25,6 +26,14 @@ urlpatterns = [
     path('logout/', LogoutAPIView.as_view(), name='user-logout'),
     path("categories/", CategoryListAPIView.as_view(), name="category-list"),
     path("products/", ProductListAPIView.as_view(), name="product-list"),  # Assuming you want to use the same view for products
+    
     path("manage/product/", ManageProductAPIView.as_view(), name="manage-product-list"),  # For managing products
     path("order/", orderAPIView.as_view(), name="order-list"),  # Assuming you want to use the same view for orders
-]
+    path("manage/category/", ManageCategoryAPIView.as_view(), name="manage-category-list"),  # For managing categories
+    path("manage/review/", ReviewAPIView.as_view(), name="review-list"),  # Assuming you want to use the same view for reviews
+    path("product/<int:pk>/reviews/", ReviewListAPIView.as_view(), name="product-review-list"),  # For listing reviews of a specific product
+    path("manage/order/", manageOrderAPIView.as_view(), name="manage-order-list"),  # For managing orders
+    path("api/hello/", hello_world.as_view(), name="hello-world"),  # Example API endpoint
+    ]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
